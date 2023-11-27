@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css"/>
+    <title>Data Visualization Project - Scatterplot Graph</title>
+    <style>
+      html {
+        font-size: 14px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        background: rgb(2,0,36);
+        background: linear-gradient(28deg, rgba(2,0,36,1) 0%, rgba(74,74,156,1) 30%, rgba(0,255,152,1) 100%);
+        height: 100vh;
+        margin: 0;
+      }
+
+      .backdrop {
+        z-index: 1;
+        position: absolute;
+        width: 100vw;
+        height: 100vh;
+        top: 0;
+        left: 0;
+        background: rgba(66, 66, 66, 0.534)
+      }
+
+      .content {
+        width: 80vw;
+        height: 100vh;
+        z-index: 10;
+        background: #eee;
+        box-shadow: 5px 5px 30px rgba(0, 0, 0, 0.33);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      #title {
+        font-size: 2.7rem;
+        font-weight: 100;
+        color: rgb(59, 224, 50);
+        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+        margin-bottom: 0;
+        padding: 0;
+      }
+
+      .subtitle {
+        margin: 0;
+        padding: 0;
+        color: lightslategray;
+        font-weight: 100;
+      }
+
+      .title-wrapper {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      #chart-svg {
+        width: 50vw;
+        height: 60vh;
+      }
+
+      .dot:hover {
+        fill: yellowgreen;
+        cursor: pointer;
+      }
+
+      .tooltip {
+        position: absolute;
+        padding: 1.3rem;
+        background: white;
+        box-shadow: 4px 4px 15px rgba(66, 66, 66, 0.534);
+        border-radius: 8px;
+        opacity: 0.8;
+        z-index: 20;
+        text-align: left;
+        display: none;
+        max-width: 350px;
+      }
+
+      .show {
+        display: block;
+      }
+
+      .chart-wrapper {
+        text-align: center;
+        position: relative;
+      }
+
+      .chart-description {
+        max-width: 500px;
+        align-self: end;
+        text-align: right;
+      }
+
+      #legend {
+        text-align: right;
+        position: absolute;
+        right: 15%;
+        top: 70%;
+      }
+
+      #legend ul {
+        list-style-type: none;
+      }
+
+      #legend li {
+        margin: 0.5rem 0;
+      }
+
+      .square {
+        width: 1.2rem;
+        height: 1.2rem;
+        display: inline-block;
+        vertical-align: baseline;
+      }
+
+      .green {
+        background-color: lightgreen;
+      }
+
+      .red {
+        background: lightsalmon;
+      }
+
+      .flag-emoji {
+        font-size: 1.8rem;
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        opacity: 0.85;
+      }
+
+      .tooltip-name {
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+
+    </style>
+  </head>
+  <body>
+
+    <div class="backdrop"></div>
+
+    <div class="tooltip hide" id="tooltip">Tooltip</div>
+
+    <div class="overlay"></div>
+
+    <div class="content">
+      <div class="title-wrapper">
+        <h1 id="title">Doping in Professional Bicycle Racing</h1>
+        <h2 class="subtitle">35 Fastest times up Alpe d'Huez</h2>
+      </div>
+      <div class="chart-wrapper">
+        <div id="legend">
+          <ul>
+            <li>No doping allegations <div class="square green"></div></li>
+            <li>Riders with doping allegations <div class="square red"></div></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="chart-description"></div>
+      
+    </div>
+
+    <script type="text/javascript">
+      const DATASET_URL = "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json";
+
+      document.addEventListener("DOMContentLoaded", () => {
+
+        fetch(DATASET_URL)
+          .then((response) => response.json())
+          .then((json) => {
+            response = JSON.parse(JSON.stringify(json));
+            console.log('Received data from API...');
+            console.log(response)
+            drawPlot(response);
+          })
+          .catch(msg => {
+            console.error(msg)
+          });
+
+      });
+
+      function drawPlot(api_response) {
+        const dataset = api_response;
+
+        const width = 755;
+        const height = 755;
+        const padding = 30;
+        const leftPadding = 45;
+
+
+        const xScale = d3.scaleLinear()
+                    .domain([d3.min(dataset, d => d.Year), d3.max(dataset, d => d.Year)])
+                    .range([leftPadding, width - padding]);
+
+        const yScale = d3.scaleUtc()
+                    .domain([d3.min(dataset, (d) => timeToDate(d.Time)), d3.max(dataset, (d) => timeToDate(d.Time))])
+                    .range([height - padding, padding]);
+
+        const svg = d3.create('svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        svg.append('g')
+            .selectAll("circle")
+            .data(dataset)
+            .enter()
+            .append("circle")
+              .attr('cx', (d) => xScale(d.Year))
+              .attr('cy', (d) => yScale(timeToDate(d.Time)))
+              .attr('r', 5)
+              .attr('fill', (d) => {
+                  if (d.Doping == "") {
+                    return 'lightgreen'
+                  } else {
+                    return 'lightsalmon';
+                  }
+              })
+              .attr('class', 'dot')
+              .attr('data-xvalue', (d) => d.Year)
+              .attr('data-yvalue', (d) => timeToDate(d.Time))
+              .attr('data-name', (d) => d.Name)
+              .attr('data-doping', (d) => d.Doping)
+              .attr('data-nationality', (d) => d.Nationality)
+              .attr('data-place', (d) => d.Place)
+              .attr('data-wiki-url', (d) => d.URL)
+  
+            
+        const xAxis = d3.axisBottom(xScale)
+                        .tickFormat(x => (x * 1).toFixed());
+        
+        svg.append('g')
+            .attr('transform', `translate(0, ${height - padding})`)
+            .attr('id', 'x-axis')
+            .call(xAxis);
+
+        
+        const yAxis = d3.axisLeft(yScale)
+                      .tickFormat(y => `${y.getMinutes()}:${y.getSeconds() == 0 ? "00" : y.getSeconds()}`)
+
+        svg.append('g')
+            .attr('transform', `translate(${leftPadding}, 0)`)
+            .attr('id', 'y-axis')
+            .call(yAxis);
+
+        document.querySelector('.chart-wrapper').appendChild(svg.node());
+
+        setupTooltip();
+      }
+
+      function timeToDate(time) {
+        return new Date(2000, 0, 1, 0, time.split(":")[0], time.split(":")[1]);
+      }
+
+      function setupTooltip() {
+        const tooltip = document.querySelector('.tooltip');
+        const dots = document.getElementsByClassName('dot');
+          
+        for (let element of dots) {
+            element.addEventListener('mouseover', function(event) {
+                updateTooltip(tooltip, event);
+                showNode(tooltip);
+            });
+
+            element.addEventListener('mouseout', function(event) {
+                hideNode(tooltip);
+            })
+        }
+      }
+
+      function updateTooltip(tooltip, event) {
+        const mouseX = event.clientX;
+        const mouseY = event.clientY;
+        const paddingX = 20;
+        tooltip.style.top = mouseY + "px";
+        tooltip.style.left = mouseX + paddingX + "px";
+
+        tooltip.setAttribute('data-year', event.target.getAttribute('data-xvalue'));
+
+        const time_date = new Date(event.target.getAttribute('data-yvalue'));
+        const time = time_date.getMinutes() + ":" + time_date.getSeconds() == 0 ? "00" : time_date.getSeconds();
+
+        const year = event.target.getAttribute('data-xvalue');
+        const name = event.target.getAttribute('data-name');
+        const doping = event.target.getAttribute('data-doping');
+        const nationality = event.target.getAttribute('data-nationality');
+        const place = event.target.getAttribute('data-place');
+        const wiki_url = event.target.getAttribute('data-wiki-url');
+
+        let html = "";
+
+        if (name != null && nationality != null) {
+          html += `<span class="tooltip-name">${name}</span> (${nationality}) `;
+          html += `<span class="flag-emoji fi ${getCountryCode(nationality)}"> </span>`;
+        }
+        if (year != null && time != null && place != null) {
+          html += `<br/>Year: <b>${year}</b>, Time: <b>${time}</b>, Place: <b>${place}</b>`;
+        }
+        if (doping != "") {
+          html += `<br/><br/>${doping}`
+        }
+        if (wiki_url != "") {
+          html += `<br/><br/><a href="${wiki_url}">${wiki_url}</a>`
+        }
+
+        tooltip.innerHTML = html;
+      }
+
+      function showNode(node) {
+        node.classList.add('show');
+      }
+
+      function hideNode(node) {
+        node.classList.remove('show');
+      }
+
+      function getCountryCode(nationality) {
+        switch (nationality) {
+          case 'ITA':
+            return 'fi-it';
+          case 'GER':
+            return 'fi-de'
+          case 'FRA':
+            return "fi-fr"
+          case 'ESP':
+            return "fi-es"
+          case 'USA':
+            return "fi-us"
+          case 'DEN':
+            return "fi-dk"
+          case 'SUI':
+            return "fi-sa"
+          case 'POR':
+            return "fi-pt"
+          case 'RUS':
+            return "fi-ru"
+          case 'COL':
+            return "fi-co"
+          case 'UKR':
+            return "fi-ua"
+        }
+      }
+
+    </script>
+  </body>
+  <script type="text/javascript" src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js" integrity="sha512-NmSTfudjn1FCaFMQ+f4xveBmwRJn5ep8Wu+YOeq+CeExhFtKvwhfKVXFX3tGxoGWxu8Fl83qm9nE8/Hkc1dWZg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</html>
