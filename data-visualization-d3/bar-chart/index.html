@@ -37,11 +37,16 @@
       .content {
         margin: auto;
         z-index: 10;
+        padding: 1.3rem;
+        background: white;
+        border-radius: 13px;
       }
 
       #title {
         font-size: 3.3rem;
         color: darkorange;
+        text-align: center;
+        font-family: 'Times New Roman', Times, serif;
       }
 
       #chart-svg {
@@ -49,10 +54,25 @@
         height: 60vh;
       }
 
-      .chart-wrapper {
-        padding: 2rem;
+      .bar:hover {
+        fill: lightpink;
+        cursor: pointer;
+      }
+
+      .tooltip {
+        position: absolute;
+        padding: 1.6rem;
         background: white;
-        border-radius: 13px;
+        box-shadow: 4px 4px 15px rgba(66, 66, 66, 0.534);
+        border-radius: 8px;
+        opacity: 0.8;
+        z-index: 20;
+        text-align: center;
+        display: none;
+      }
+
+      .show {
+        display: block;
       }
     </style>
   </head>
@@ -60,9 +80,13 @@
 
     <div class="backdrop"></div>
 
+    <div class="tooltip hide" id="tooltip">Tooltip</div>
+
+    <div class="overlay"></div>
+
     <div class="content">
       <div class="title-wrapper">
-        <h1 id="title">Bar Graph Project</h1>
+        <h1 id="title">United States GDP</h1>
       </div>
 
       <div class="chart-wrapper">
@@ -81,52 +105,153 @@
           .then((json) => {
             response = JSON.parse(JSON.stringify(json));
             console.log('Received data from API...');
+            console.log(response)
             drawGraphBars(response);
           })
           .catch(msg => {
             console.error(msg)
           });
 
+          window.addEventListener('mousemove', function(event) {
+            const mouseX = event.clientX;
+            const mouseY = event.clientY;
+            const paddingX = 20;
+
+            const tooltip = document.querySelector('.tooltip');
+
+            tooltip.style.top = mouseY + "px";
+            tooltip.style.left = mouseX + paddingX + "px";
+          });
 
       });
 
       function drawGraphBars(api_response) {
         const dataset = api_response.data;
-        console.log(dataset);
+        console.log(dataset.length);
 
         const width = 955;
         const height = 520;
-        const padding = 10;
+        const padding = 20;
 
-        const xScale = d3.scaleLinear()
+        const xScale = d3.scaleUtc()
                     .domain([d3.min(dataset, d => new Date(d[0])), d3.max(dataset, d => new Date(d[0]))])
-                    .range(padding, width - padding);
+                    .range([padding, width - padding]);
 
         const yScale = d3.scaleLinear()
                     .domain([0, d3.max(dataset, (d) => d[1])])
-                    .range(height - padding, padding);
+                    .range([padding, height - padding]);
 
         console.log(xScale);
-
-
+        console.log(yScale.domain())
+        console.log(yScale.range())
+        
         const svg = d3.create('svg')
             .attr('width', width)
             .attr('height', height);
+
+        const barWidth = 1 + (width - 2 * padding) / dataset.length;
 
         svg.append('g')
             .selectAll("rect")
             .data(dataset)
             .enter()
             .append("rect")
-            .attr('x', (d) => xScale(d[0]))
-            .attr('y', (d) => yScale(d[1]))
-            .attr('width', xScale)
-            .attr('height', (d) => yScale(d[1]))
-            .attr('fill', 'navy')
+            .attr('x', (d) => xScale(new Date(d[0])))
+            .attr('y', (d) => height - yScale(d[1]))
+            .attr('width', barWidth)
+            .attr('height', (d) => yScale(d[1]) - padding)
+            .attr('fill', (d, i) => getColorForIndex(i, dataset.length))
+            .attr('class', 'bar')
+            .attr('data-date', (d) => d[0])
+            .attr('data-gdp', (d) => d[1])
             
+        const xAxis = d3.axisBottom(xScale);
+        
+        svg.append('g')
+            .attr('transform', `translate(0, ${height - padding})`)
+            .attr('id', 'x-axis')
+            .call(xAxis);
+
+        
+        const yAxis = d3.axisLeft(yScale)
+
+        svg.append('g')
+            .attr('transform', `translate(${padding}, 1)`)
+            .attr('id', 'y-axis')
+            .call(yAxis);
 
         document.querySelector('.chart-wrapper').appendChild(svg.node());
 
+        setupTooltip();
+      }
+
+      function getColorForIndex(index, len) {
+        color = 'rgba(255, ';
+        color += Math.floor(0.55 * (index / len) * 256);
+        color += ', 0, 0.89)';
+        return color;
+      }
+
+      function setupTooltip() {
+        const tooltip = document.querySelector('.tooltip');
+        const bars = document.getElementsByClassName('bar');
+          
+        for (let element of bars) {
+            element.addEventListener('mouseover', function(event) {
+                updateTooltip(tooltip, event);
+                showNode(tooltip);
+            });
+
+            element.addEventListener('mouseout', function(event) {
+                hideNode(tooltip);
+            })
+        }
+      }
+
+      function updateTooltip(tooltip, event) {
+        tooltip.setAttribute('data-date', event.target.getAttribute('data-date'));
+
+        const date = new Date(event.target.getAttribute('data-date'));
+        const gdp = event.target.getAttribute('data-gdp');
+
+        html = "<b>"
+        html += parseDate(date);
+        html += "</b><br/>"
+        html += parseGDP(gdp);
+
+        tooltip.innerHTML = html;
+      }
+
+      function showNode(node) {
+        node.classList.add('show');
+      }
+
+      function hideNode(node) {
+        node.classList.remove('show');
+      }
+
+      function parseDate(date) {
+        let day = date.getDay();
+        let month = date.getMonth();
+        let year = date.getFullYear();
+
+        let quarter = '';
+        if (month <= 2) {
+            quarter = 'Q1'
+        } else if (month <= 5) {
+            quarter = 'Q2'
+        } else if (month <= 8) {
+            quarter = 'Q3'
+        } else {
+            quarter = 'Q4'
+        }
+
+        return `${year} ${quarter}`
+      }
+
+      function parseGDP(gdp) {
+        const billions = Math.floor(gdp / 1000);
+        return `$${billions},${Math.round(100 * (gdp - (billions * 1000))) / 100} Billion`;
       }
     </script>
   </body>
