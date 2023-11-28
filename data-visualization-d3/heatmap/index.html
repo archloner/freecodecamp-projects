@@ -7,6 +7,9 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css"
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pragati+Narrow&display=swap" rel="stylesheet">
     <title>Data Visualization Project - Heatmap</title>
     <style>
       html {
@@ -20,6 +23,7 @@
         background: #eee;
         height: 100vh;
         margin: 0;
+        font-family: 'Pragati Narrow', sans-serif;
       }
 
       .backdrop {
@@ -34,23 +38,22 @@
 
       .content {
         margin: auto;
-        width: 100vw;
         height: 100vh;
         z-index: 10;
-        box-shadow: 5px 5px 30px rgba(0, 0, 0, 0.33);
+        /* box-shadow: 5px 5px 30px rgba(0, 0, 0, 0.33); */
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        /* justify-content: center; */
       }
 
       #title {
         font-size: 2.3rem;
         font-weight: 100;
         color: rgb(38, 49, 37);
-        font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
-          "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
-        margin-bottom: 0;
+        font-family: inherit;
+        margin: 0;
         padding: 0;
+        line-height: 2.4rem;
       }
 
       .subtitle {
@@ -58,11 +61,16 @@
         padding: 0;
         color: rgb(82, 87, 93);
         font-weight: 100;
+        font-size: 1.4rem;
+        line-height: 1.5rem;
       }
 
       .title-wrapper {
         text-align: center;
         margin-bottom: 0.1rem;
+        margin-top: 4rem;
+        padding: 1.3rem;
+        border-bottom: 3px dashed slategray;
       }
 
       #chart-svg {
@@ -70,18 +78,19 @@
         height: 60vh;
       }
 
-      .dot:hover {
-        fill: yellowgreen;
+      .cell:hover {
+        fill: lightskyblue;
         cursor: pointer;
       }
 
       .tooltip {
         position: absolute;
-        padding: 1.3rem;
+        padding: 0.6rem 0.9rem;
+        line-height: 1.2rem;
         background: black;
         color: #eee;
         box-shadow: 4px 4px 15px rgba(66, 66, 66, 0.534);
-        border-radius: 8px;
+        border-radius: 5px;
         opacity: 0.8;
         z-index: 20;
         text-align: left;
@@ -106,10 +115,11 @@
 
       #legend {
         position: absolute;
-        left: 16%;
-        top: 105%;
+        left: 4%;
+        top: 101%;
         display: flex;
         flex-direction: column;
+        line-height: 1.1rem;
       }
 
       .square {
@@ -139,6 +149,10 @@
         font-size: 1.5rem;
         font-weight: 600;
       }
+
+      #baseTemperatureSpan {
+        color: lightcoral;
+      }
     </style>
   </head>
   <body>
@@ -152,12 +166,15 @@
       <div class="title-wrapper">
         <h1 id="title">Monthly Global Land-Surface Temperature</h1>
         <h2 class="subtitle">
-          1753 - 2015: base temperature <span id="baseTemperatureSpan"></span>℃
+          (1753 - 2015) Base temperature: <span id="baseTemperatureSpan"></span>℃
         </h2>
       </div>
 
       <div class="chart-wrapper">
-        <div id="legend">Legend</div>
+        <div id="legend">
+          <b>Legend</b>
+          Temperature variance (in &deg;C)
+        </div>
       </div>
 
       <div class="chart-description" id="description"></div>
@@ -194,7 +211,7 @@
         const height = 455;
 
         const padding = 30;
-        const leftPadding = 55;
+        const leftPadding = 58;
 
         const years = getUniqueYearsArray(dataset);
         const varianceSteps = getVarianceSteps(dataset, 9);
@@ -214,7 +231,7 @@
           .attr("width", width)
           .attr("height", height);
 
-        const rectHeight = (height - padding) / yScale.domain().length;
+        const rectHeight = (height - padding * 2) / yScale.domain().length;
 
         svg
           .append("g")
@@ -423,9 +440,7 @@
           });
 
           element.addEventListener("mouseout", function (event) {
-            setTimeout(() => {
-              hideNode(tooltip);
-            }, 800);
+              hideNode(tooltip)
           });
         }
       }
