@@ -69,7 +69,7 @@
     .title-wrapper {
       text-align: center;
       margin-bottom: 0.1rem;
-      margin-top: 4rem;
+      margin-top: 15vh;
       padding: 1.3rem;
     }
 
@@ -154,6 +154,14 @@
       color: lightcoral;
     }
   </style>
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"
+    integrity="sha512-NmSTfudjn1FCaFMQ+f4xveBmwRJn5ep8Wu+YOeq+CeExhFtKvwhfKVXFX3tGxoGWxu8Fl83qm9nE8/Hkc1dWZg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"
+    integrity="sha512-4UKI/XKm3xrvJ6pZS5oTRvIQGIzZFoXR71rRBb1y2N+PbwAsKa5tPl2J6WvbEvwN3TxQCm8hMzsl/pO+82iRlg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 
 <body>
@@ -172,21 +180,16 @@
     </div>
 
     <div class="chart-wrapper">
-      <div id="legend">
-        <b>Legend</b>
-      </div>
     </div>
 
     <div class="chart-description" id="description"></div>
   </div>
 
   <script type="module">
-    // import * as Utils from "../utils.js";
-
     const US_EDUCATION_DATA_URL = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json";
     const US_COUNTRY_DATA_URL = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json";
 
-    let DATA = { country: [], edu: []};
+    let DATA = { country: [], edu: [] };
 
     async function fetch_data() {
       try {
@@ -200,7 +203,7 @@
         console.error(`ERROR: ${error}`);
         updateUIonAPIError(error)
       }
-        
+
       try {
         const response = await fetch(US_EDUCATION_DATA_URL);
         const json = await response.json();
@@ -210,32 +213,45 @@
       } catch (error) {
         console.error(`ERROR: ${error}`);
         updateUIonAPIError(error)
-      } 
+      }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        main();
+      main();
     });
-    
+
     async function main() {
       await fetch_data();
       console.log('after fetch_data()')
       drawCountryData(DATA);
     }
 
+    function testColors(colors) {
+      const divs = document.createElement('div')
+      for (let c of colors) {
+        const square = document.createElement('div')
+        square.classList.add('square')
+        square.style.backgroundColor = c;
+        divs.appendChild(square);
+      }
+      document.getElementById("description").appendChild(divs);
+    }
 
     function drawCountryData(data) {
       const width = 975;
       const height = 610;
       const padding = 20;
 
-      const colors = ["#e8e8e8", "#b5c0da", "#6c83b5",
-      "#b8d6be", "#90b2b3", "#567994",
-      "#73ae80", "#5a9178", "#2a5a5b"];
+      const colors = d3.schemeSpectral[10]
 
-      const color = (index) => {
-        return '#eee';
+      const color = (value) => {
+        if (!value) return '#eee';
+        return d3.schemePiYG[y(value)]
       }
+
+      const n = Math.floor(Math.sqrt(colors.length))
+
+      const y = d3.scaleQuantile(Array.from(data.edu, d => d.bachelorsOrHigher), d3.schemeSpectral[11]);
 
       const index = d3.index(data.edu, d => d.fips)
 
@@ -249,69 +265,24 @@
         .selectAll('path')
         .data(topojson.feature(data.country, data.country.objects.counties).features)
         .join('path')
-          .attr('fill', d => color(index.get(d.id)))
-          .attr('d', path)
-          .attr('class', 'county')
-          .attr('data-fips', d => index.get(d.id).fips)
-          .attr('data-education', d => index.get(d.id).bachelorsOrHigher)
-          .attr('data-county', d => index.get(d.id).area_name)
-          .attr('data-state', d => index.get(d.id).state)
+        .attr('fill', d => y(index.get(d.id).bachelorsOrHigher))
+        .attr('d', path)
+        .attr('class', 'county')
+        .attr('data-fips', d => index.get(d.id).fips)
+        .attr('data-education', d => index.get(d.id).bachelorsOrHigher)
+        .attr('data-county', d => index.get(d.id).area_name)
+        .attr('data-state', d => index.get(d.id).state)
         .append('title')
-          .text(d => 'lol2')
+        .text(d => 'lol2')
 
-      // Legend
       svg.append('g')
-        .append()
-        .attr('transfrom', `translate(${height}, ${padding})`)
+        .attr('transform', `translate(${width - 455}, 0)`)
+        .attr('id', 'legend')
+        .append(() => Legend(y, { title: 'adults age 25+ with bachelor\'s degree or higher (%)', width: 455 }));
 
       document.querySelector('.chart-wrapper').appendChild(svg.node())
-        
+
       setupTooltip()
-    } 
-
-    function appendLegendRects(steps) {
-      const legendWidth = 350;
-      const legendHeight = 80;
-      const padding = 10;
-      steps.shift();
-
-      const rectWidth = (legendWidth - 2 * padding) / steps.length;
-      const rectHeight = 33;
-
-      const svg = d3
-        .create("svg")
-        .attr("width", legendWidth)
-        .attr("height", legendHeight)
-        .attr("fill", "red");
-
-      svg
-        .append("g")
-        .selectAll()
-        .data(steps)
-        .join("rect")
-        .attr("x", (d, i) => rectWidth * i)
-        .attr("y", padding)
-        .attr("width", rectWidth)
-        .attr("height", rectHeight)
-        .attr("fill", (d, i) => getColorById(i + 1));
-
-      const x = d3
-        .scaleBand()
-        .domain(steps)
-        .range([0, rectWidth * steps.length]);
-
-      const xAxis = d3.axisBottom(x).tickFormat((d) => decimalPlaces(d, 2));
-
-      svg
-        .append("g")
-        .attr(
-          "transform",
-          `translate(0, ${legendHeight - padding - rectHeight + 5})`
-        )
-        .call(xAxis);
-
-      const legendDiv = document.querySelector("#legend");
-      legendDiv.appendChild(svg.node());
     }
 
     function setupTooltip() {
@@ -319,12 +290,12 @@
       const elems = document.getElementsByClassName("county");
 
       for (let element of elems) {
-        element.addEventListener("mouseover", function(event) {
+        element.addEventListener("mouseover", function (event) {
           updateTooltip(tooltip, event);
           showNode(tooltip);
         });
 
-        element.addEventListener("mouseout", function(event) {
+        element.addEventListener("mouseout", function (event) {
           hideNode(tooltip)
         });
       }
@@ -341,6 +312,8 @@
       const county = event.target.getAttribute('data-county')
       const degree = event.target.getAttribute('data-education')
       const state = event.target.getAttribute('data-state')
+
+      tooltip.setAttribute('data-education', degree);
 
       let html = "";
 
@@ -364,16 +337,164 @@
       showMessagePopup()
     }
 
-    function hideMessagePopup() {}
-    function updateMessagePopupWithError() {}
-    function showMessagePopup() {}
+    function hideMessagePopup() { }
+    function updateMessagePopupWithError() { }
+    function showMessagePopup() { }
 
+
+    // Copyright 2021, Observable Inc.
+    // Released under the ISC license.
+    // https://observablehq.com/@d3/color-legend
+    function Legend(color, {
+      title,
+      tickSize = 6,
+      width = 320,
+      height = 44 + tickSize,
+      marginTop = 18,
+      marginRight = 0,
+      marginBottom = 16 + tickSize,
+      marginLeft = 0,
+      ticks = width / 64,
+      tickFormat,
+      tickValues
+    } = {}) {
+
+      function ramp(color, n = 256) {
+        const canvas = document.createElement("canvas");
+        canvas.width = n;
+        canvas.height = 1;
+        const context = canvas.getContext("2d");
+        for (let i = 0; i < n; ++i) {
+          context.fillStyle = color(i / (n - 1));
+          context.fillRect(i, 0, 1, 1);
+        }
+        return canvas;
+      }
+
+      const svg = d3.create("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("viewBox", [0, 0, width, height])
+        .style("overflow", "visible")
+        .style("display", "block");
+
+      let tickAdjust = g => g.selectAll(".tick line").attr("y1", marginTop + marginBottom - height);
+      let x;
+
+      // Continuous
+      if (color.interpolate) {
+        const n = Math.min(color.domain().length, color.range().length);
+
+        x = color.copy().rangeRound(d3.quantize(d3.interpolate(marginLeft, width - marginRight), n));
+
+        svg.append("image")
+          .attr("x", marginLeft)
+          .attr("y", marginTop)
+          .attr("width", width - marginLeft - marginRight)
+          .attr("height", height - marginTop - marginBottom)
+          .attr("preserveAspectRatio", "none")
+          .attr("xlink:href", ramp(color.copy().domain(d3.quantize(d3.interpolate(0, 1), n))).toDataURL());
+      }
+
+      // Sequential
+      else if (color.interpolator) {
+        x = Object.assign(color.copy()
+          .interpolator(d3.interpolateRound(marginLeft, width - marginRight)),
+          { range() { return [marginLeft, width - marginRight]; } });
+
+        svg.append("image")
+          .attr("x", marginLeft)
+          .attr("y", marginTop)
+          .attr("width", width - marginLeft - marginRight)
+          .attr("height", height - marginTop - marginBottom)
+          .attr("preserveAspectRatio", "none")
+          .attr("xlink:href", ramp(color.interpolator()).toDataURL());
+
+        // scaleSequentialQuantile doesn’t implement ticks or tickFormat.
+        if (!x.ticks) {
+          if (tickValues === undefined) {
+            const n = Math.round(ticks + 1);
+            tickValues = d3.range(n).map(i => d3.quantile(color.domain(), i / (n - 1)));
+          }
+          if (typeof tickFormat !== "function") {
+            tickFormat = d3.format(tickFormat === undefined ? ",f" : tickFormat);
+          }
+        }
+      }
+
+      // Threshold
+      else if (color.invertExtent) {
+        const thresholds
+          = color.thresholds ? color.thresholds() // scaleQuantize
+            : color.quantiles ? color.quantiles() // scaleQuantile
+              : color.domain(); // scaleThreshold
+
+        const thresholdFormat
+          = tickFormat === undefined ? d => d
+            : typeof tickFormat === "string" ? d3.format(tickFormat)
+              : tickFormat;
+
+        x = d3.scaleLinear()
+          .domain([-1, color.range().length - 1])
+          .rangeRound([marginLeft, width - marginRight]);
+
+        svg.append("g")
+          .selectAll("rect")
+          .data(color.range())
+          .join("rect")
+          .attr("x", (d, i) => x(i - 1))
+          .attr("y", marginTop)
+          .attr("width", (d, i) => x(i) - x(i - 1))
+          .attr("height", height - marginTop - marginBottom)
+          .attr("fill", d => d);
+
+        tickValues = d3.range(thresholds.length);
+        tickFormat = i => thresholdFormat(thresholds[i], i);
+      }
+
+      // Ordinal
+      else {
+        x = d3.scaleBand()
+          .domain(color.domain())
+          .rangeRound([marginLeft, width - marginRight]);
+
+        svg.append("g")
+          .selectAll("rect")
+          .data(color.domain())
+          .join("rect")
+          .attr("x", x)
+          .attr("y", marginTop)
+          .attr("width", Math.max(0, x.bandwidth() - 1))
+          .attr("height", height - marginTop - marginBottom)
+          .attr("fill", color);
+
+        tickAdjust = () => { };
+      }
+
+      svg.append("g")
+        .attr("transform", `translate(0,${height - marginBottom})`)
+        .call(d3.axisBottom(x)
+          .ticks(ticks, typeof tickFormat === "string" ? tickFormat : undefined)
+          .tickFormat(typeof tickFormat === "function" ? tickFormat : undefined)
+          .tickSize(tickSize)
+          .tickValues(tickValues))
+        .call(tickAdjust)
+        .call(g => g.select(".domain").remove())
+        .call(g => g.append("text")
+          .attr("x", marginLeft)
+          .attr("y", marginTop + marginBottom - height - 6)
+          .attr("fill", "currentColor")
+          .attr("text-anchor", "start")
+          .attr("font-weight", "bold")
+          .attr("class", "title")
+          .text(title));
+
+      return svg.node();
+    }
 
   </script>
+
 </body>
 <script type="text/javascript" src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"
-  integrity="sha512-NmSTfudjn1FCaFMQ+f4xveBmwRJn5ep8Wu+YOeq+CeExhFtKvwhfKVXFX3tGxoGWxu8Fl83qm9nE8/Hkc1dWZg=="
-  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js" integrity="sha512-4UKI/XKm3xrvJ6pZS5oTRvIQGIzZFoXR71rRBb1y2N+PbwAsKa5tPl2J6WvbEvwN3TxQCm8hMzsl/pO+82iRlg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 </html>
