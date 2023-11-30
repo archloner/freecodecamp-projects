@@ -27,7 +27,7 @@
 
     .backdrop {
       z-index: 1;
-      position: absolute;
+      position: fixed;
       width: 100vw;
       height: 100vh;
       top: 0;
@@ -276,9 +276,9 @@
         .text(d => 'lol2')
 
       svg.append('g')
-        .attr('transform', `translate(${width - 455}, 0)`)
+        .attr('transform', `translate(${width - 425}, 0)`)
         .attr('id', 'legend')
-        .append(() => Legend(y, { title: 'adults age 25+ with bachelor\'s degree or higher (%)', width: 455 }));
+        .append(() => Legend(y, { title: 'Adults age 25+ with bachelor\'s degree or higher (%)', width: 325, tickFormat: d3.format(",.2f")}));
 
       document.querySelector('.chart-wrapper').appendChild(svg.node())
 
@@ -491,7 +491,6 @@
 
       return svg.node();
     }
-
   </script>
 
 </body>
