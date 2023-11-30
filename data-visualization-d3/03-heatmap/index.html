@@ -3,13 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css"
-    />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Pragati+Narrow&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <title>Data Visualization Project - Heatmap</title>
     <style>
       html {
@@ -24,6 +21,7 @@
         height: 100vh;
         margin: 0;
         font-family: 'Pragati Narrow', sans-serif;
+        position: relative;
       }
 
       .backdrop {
@@ -102,9 +100,14 @@
         display: block;
       }
 
+      .hide {
+        opacity: 0;
+      }
+
       .chart-wrapper {
         text-align: center;
         position: relative;
+        min-width: 1255px;
       }
 
       .chart-description {
@@ -153,14 +156,74 @@
       #baseTemperatureSpan {
         color: lightcoral;
       }
+
+      .fade-in {
+        animation: animate-in 4.2s ease-out;
+      }
+
+      @keyframes animate-in {
+        0% {
+          transform: rotate(720deg) scale(1.7);
+          opacity: 0;
+        }
+
+        33% {
+          opacity: 0.6;
+        }
+
+        80% {
+          transform: rotate(2deg) scale(1);
+        }
+
+        95% {
+          transform: rotate(-5deg) scale(0.8);
+        }
+
+        100% {
+          transform: rotate(0) scale(1);
+          opacity: 1;
+        }
+      }
+
+      .intro-replay {
+        display: inline-block;
+        position: absolute;
+        right: 20px;
+        top: 20px;
+        z-index: 15;
+        background: darkmagenta;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        border: 0;
+        border-radius: 50%;
+        color: #eee;
+        transition: all .3s ease-out;
+      }
+
+      .intro-replay:hover {
+        cursor: pointer;
+        background: rgb(200, 10, 200);
+        
+      }
+
+      .intro-replay span {
+        position: absolute;
+        top: 10%;
+        left: 10%;
+      }
     </style>
   </head>
   <body>
     <div class="backdrop"></div>
 
-    <div class="tooltip hide" id="tooltip">Tooltip</div>
+    <div class="tooltip" id="tooltip">Tooltip</div>
 
     <div class="overlay"></div>
+
+    <div class="intro-replay"><span class="material-symbols-outlined">
+      refresh
+      </span></div>
 
     <div class="content">
       <div class="title-wrapper">
@@ -170,7 +233,7 @@
         </h2>
       </div>
 
-      <div class="chart-wrapper">
+      <div class="chart-wrapper hide">
         <div id="legend">
           <b>Legend</b>
           Temperature variance (in &deg;C)
@@ -195,6 +258,11 @@
           })
           .catch((msg) => {
             console.error(msg);
+          });
+
+          const replayBtn = document.querySelector('.intro-replay')
+          replayBtn.addEventListener('click', (event) => {
+            animatePlotIntoView()
           });
       });
 
@@ -278,6 +346,8 @@
         appendLegendRects(varianceSteps);
 
         setupTooltip();
+
+        animatePlotIntoView()
       }
 
       function getMonthName(monthNumber) {
@@ -479,6 +549,18 @@
 
       function hideNode(node) {
         node.classList.remove("show");
+      }
+
+      function animatePlotIntoView() {
+        const chartWrapper = document.querySelector('.chart-wrapper');
+        chartWrapper.classList.remove('hide')
+
+        if (!chartWrapper.classList.contains('fade-in')) {
+          chartWrapper.classList.add('fade-in');
+          setTimeout(() => {
+            chartWrapper.classList.remove('fade-in');
+          }, 4300)
+        }
       }
     </script>
   </body>
