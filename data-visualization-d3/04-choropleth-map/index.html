@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pragati+Narrow&display=swap" rel="stylesheet">
-  <title>Data Visualization Project - Heatmap</title>
+  <title>Data Visualization Project - Chorolpeth Map</title>
   <style>
     html {
       font-size: 14px;
@@ -22,6 +22,7 @@
       height: 100vh;
       margin: 0;
       font-family: 'Pragati Narrow', sans-serif;
+      background: radial-gradient(circle, #5c0067 0%, #00d4ff 100%);
     }
 
     .backdrop {
@@ -31,7 +32,8 @@
       height: 100vh;
       top: 0;
       left: 0;
-      background: rgba(194, 207, 173, 0.534);
+      background: rgba(199, 199, 167, 0.923);
+      opacity: 0.6;
     }
 
     .content {
@@ -45,11 +47,12 @@
     }
 
     #title {
-      font-size: 2.3rem;
+      font-size: 4.3rem;
       font-weight: 100;
       color: rgb(38, 49, 37);
       font-family: inherit;
       margin: 0;
+      margin-bottom: 0.8rem;
       padding: 0;
       line-height: 2.4rem;
     }
@@ -57,7 +60,7 @@
     .subtitle {
       margin: 0;
       padding: 0;
-      color: rgb(82, 87, 93);
+      color: rgb(56, 58, 58);
       font-weight: 100;
       font-size: 1.4rem;
       line-height: 1.5rem;
@@ -68,7 +71,6 @@
       margin-bottom: 0.1rem;
       margin-top: 4rem;
       padding: 1.3rem;
-      border-bottom: 3px dashed slategray;
     }
 
     #chart-svg {
@@ -163,16 +165,15 @@
 
   <div class="content">
     <div class="title-wrapper">
-      <h1 id="title">Monthly Global Land-Surface Temperature</h1>
+      <h1 id="title">United States Educational Attainment</h1>
       <h2 class="subtitle">
-        (1753 - 2015) Base temperature: <span id="baseTemperatureSpan"></span>℃
+        Percentage of adults age 25 and older with bachelor's degree or higher (2010 - 2014)
       </h2>
     </div>
 
     <div class="chart-wrapper">
       <div id="legend">
         <b>Legend</b>
-        Temperature variance (in &deg;C)
       </div>
     </div>
 
@@ -205,7 +206,6 @@
         const json = await response.json();
         const education_data = JSON.parse(JSON.stringify(json));
         console.log("Received Education Data data from API...");
-        console.log(education_data)
         DATA.edu = education_data;
       } catch (error) {
         console.error(`ERROR: ${error}`);
@@ -220,186 +220,54 @@
     async function main() {
       await fetch_data();
       console.log('after fetch_data()')
-      console.log(DATA)
+      drawCountryData(DATA);
     }
 
 
     function drawCountryData(data) {
-      console.log(data)
+      const width = 975;
+      const height = 610;
+      const padding = 20;
+
+      const colors = ["#e8e8e8", "#b5c0da", "#6c83b5",
+      "#b8d6be", "#90b2b3", "#567994",
+      "#73ae80", "#5a9178", "#2a5a5b"];
+
+      const color = (index) => {
+        return '#eee';
+      }
+
+      const index = d3.index(data.edu, d => d.fips)
+
+      const path = d3.geoPath();
+
+      const svg = d3.create('svg')
+        .attr('width', width)
+        .attr('height', height)
+
+      svg.append('g')
+        .selectAll('path')
+        .data(topojson.feature(data.country, data.country.objects.counties).features)
+        .join('path')
+          .attr('fill', d => color(index.get(d.id)))
+          .attr('d', path)
+          .attr('class', 'county')
+          .attr('data-fips', d => index.get(d.id).fips)
+          .attr('data-education', d => index.get(d.id).bachelorsOrHigher)
+          .attr('data-county', d => index.get(d.id).area_name)
+          .attr('data-state', d => index.get(d.id).state)
+        .append('title')
+          .text(d => 'lol2')
+
+      // Legend
+      svg.append('g')
+        .append()
+        .attr('transfrom', `translate(${height}, ${padding})`)
+
+      document.querySelector('.chart-wrapper').appendChild(svg.node())
+        
+      setupTooltip()
     } 
-
-    function drawPlot(api_response) {
-      const baseTempSpan = document.getElementById("baseTemperatureSpan");
-      if (api_response.baseTemperature != null) {
-        baseTempSpan.innerHTML = api_response.baseTemperature;
-      }
-
-      const baseTemp = api_response.baseTemperature;
-      const dataset = api_response.monthlyVariance;
-
-      const width = 1255;
-      const height = 455;
-
-      const padding = 30;
-      const leftPadding = 58;
-
-      const years = getUniqueYearsArray(dataset);
-      const varianceSteps = getVarianceSteps(dataset, 9);
-
-      const xScale = d3
-        .scaleBand()
-        .domain(years)
-        .range([leftPadding, width - padding]);
-
-      const yScale = d3
-        .scaleBand()
-        .domain(d3.range(1, 13))
-        .range([height - padding, padding]);
-
-      const svg = d3
-        .create("svg")
-        .attr("width", width)
-        .attr("height", height);
-
-      const rectHeight = (height - padding * 2) / yScale.domain().length;
-
-      svg
-        .append("g")
-        .selectAll("rect")
-        .data(dataset)
-        .enter()
-        .append("rect")
-        .attr("x", (d) => xScale(d.year))
-        .attr("y", (d) => yScale(d.month))
-        .attr("width", (d) => xScale.bandwidth())
-        .attr("height", (d) => rectHeight)
-        .attr("fill", (d) =>
-          getColorById(getColorIdForVariance(d.variance, varianceSteps))
-        )
-        .attr("class", "cell")
-        .attr("data-month", (d) => d.month - 1)
-        .attr("data-year", (d) => d.year)
-        .attr("data-temp", (d) => baseTemp + d.variance);
-
-      const xAxis = d3
-        .axisBottom(xScale)
-        .tickValues([
-          1760, 1770, 1780, 1790, 1800, 1810, 1820, 1830, 1840, 1850, 1860,
-          1870, 1880, 1890, 1900, 1910, 1920, 1930, 1940, 1950, 1960, 1970,
-          1980, 1990, 2000, 2010,
-        ]);
-
-      svg
-        .append("g")
-        .attr("transform", `translate(0, ${height - padding})`)
-        .attr("id", "x-axis")
-        .call(xAxis);
-
-      const yAxis = d3.axisLeft(yScale).tickFormat((y) => getMonthName(y));
-
-      svg
-        .append("g")
-        .attr("transform", `translate(${leftPadding}, 0)`)
-        .attr("id", "y-axis")
-        .call(yAxis);
-
-      document.querySelector(".chart-wrapper").appendChild(svg.node());
-
-      appendLegendRects(varianceSteps);
-
-      setupTooltip();
-    }
-
-    function getMonthName(monthNumber) {
-      switch (parseInt(monthNumber)) {
-        case 1:
-          return "January";
-        case 2:
-          return "February";
-        case 3:
-          return "April";
-        case 4:
-          return "March";
-        case 5:
-          return "May";
-        case 6:
-          return "June";
-        case 7:
-          return "July";
-        case 8:
-          return "August";
-        case 9:
-          return "September";
-        case 10:
-          return "October";
-        case 11:
-          return "November";
-        case 12:
-          return "December";
-      }
-    }
-
-    function getUniqueYearsArray(data) {
-      let result = [];
-      for (let obj of data) {
-        const year = obj.year;
-        if (result.includes(year)) {
-          continue;
-        }
-        result.push(year);
-      }
-      console.log(result);
-      return result;
-    }
-
-    function getVarianceSteps(data, stepsNumer) {
-      let steps = [];
-      let min = Number.MAX_VALUE;
-      let max = Number.MIN_VALUE;
-
-      for (let val of data) {
-        if (val.variance < min) {
-          min = val.variance;
-        }
-        if (val.variance > max) {
-          max = val.variance;
-        }
-      }
-
-      let step = (max - min) / stepsNumer;
-      steps.push(min);
-      for (let i = 1; i <= stepsNumer; i++) {
-        steps.push(min + i * step);
-      }
-      return steps;
-    }
-
-    function getColorIdForVariance(variance, steps) {
-      for (let i = 1; i <= steps.length; i++) {
-        if (variance <= steps[i] && variance >= steps[i - 1]) {
-          return i;
-        }
-      }
-    }
-
-    function getColorById(colorId) {
-      const colorMap = [
-        "rgb(69, 117, 180)",
-        "rgb(116, 173, 209)",
-        "rgb(171, 217, 233)",
-        "rgb(224, 243, 248)",
-        "rgb(255, 255, 191)",
-        "rgb(254, 224, 144)",
-        "rgb(253, 174, 97)",
-        "rgb(244, 109, 67)",
-        "rgb(215, 48, 39)",
-        "rgb(165, 0, 38)",
-      ];
-
-      if (colorId <= colorMap.length) {
-        return colorMap[colorId - 1];
-      }
-    }
 
     function appendLegendRects(steps) {
       const legendWidth = 350;
@@ -446,30 +314,17 @@
       legendDiv.appendChild(svg.node());
     }
 
-    function decimalPlaces(number, decimalPlaces) {
-      let factor = 1;
-      switch (decimalPlaces) {
-        case 2:
-          factor = 100;
-          break;
-        case 3:
-          factor = 1000;
-      }
-
-      return Math.round(factor * number) / factor;
-    }
-
     function setupTooltip() {
-      const tooltip = document.querySelector(".tooltip");
-      const cells = document.getElementsByClassName("cell");
+      const tooltip = document.getElementById("tooltip");
+      const elems = document.getElementsByClassName("county");
 
-      for (let element of cells) {
-        element.addEventListener("mouseover", function (event) {
+      for (let element of elems) {
+        element.addEventListener("mouseover", function(event) {
           updateTooltip(tooltip, event);
           showNode(tooltip);
         });
 
-        element.addEventListener("mouseout", function (event) {
+        element.addEventListener("mouseout", function(event) {
           hideNode(tooltip)
         });
       }
@@ -479,26 +334,17 @@
       const mouseX = event.clientX;
       const mouseY = event.clientY;
       const paddingX = 20;
+
       tooltip.style.top = mouseY + "px";
       tooltip.style.left = mouseX + paddingX + "px";
 
-      const year = event.target.getAttribute("data-year");
-      const month = event.target.getAttribute("data-month");
-      const temp = event.target.getAttribute("data-temp");
-
-      tooltip.setAttribute("data-year", year);
+      const county = event.target.getAttribute('data-county')
+      const degree = event.target.getAttribute('data-education')
+      const state = event.target.getAttribute('data-state')
 
       let html = "";
 
-      if (month != null) {
-        html += `Month: <b>${getMonthName(month)}</b>`;
-      }
-      if (year != null) {
-        html += `<br/>Year: <b>${year}</b> `;
-      }
-      if (temp != null) {
-        html += `<br/>Temperature: <b>${decimalPlaces(temp, 2)} &deg;C</b>`;
-      }
+      html += `${county}, ${state}: <b>${degree}%</b>`
 
       tooltip.innerHTML = html;
     }
@@ -529,5 +375,5 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"
   integrity="sha512-NmSTfudjn1FCaFMQ+f4xveBmwRJn5ep8Wu+YOeq+CeExhFtKvwhfKVXFX3tGxoGWxu8Fl83qm9nE8/Hkc1dWZg=="
   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js" integrity="sha512-4UKI/XKm3xrvJ6pZS5oTRvIQGIzZFoXR71rRBb1y2N+PbwAsKa5tPl2J6WvbEvwN3TxQCm8hMzsl/pO+82iRlg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </html>
