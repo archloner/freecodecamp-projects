@@ -22,7 +22,8 @@
       display: flex;
       flex-direction: column;
       background: #eee;
-      height: 100vh;
+      max-height: 100vh;
+      overflow-y: scroll;
       margin: 0;
       font-family: 'Pragati Narrow', sans-serif;
       background: radial-gradient(circle, #299272 0%, rgb(142, 231, 53) 100%);
@@ -218,41 +219,15 @@
     </nav>
   </div>
 
-  <div class="content flex-grow" id="videogames-content">
+  <div class="content flex-grow hide" id="view-content">
     <div class="title-wrapper">
-      <h1 id="title">Video Game Sales</h1>
-      <h2 class="subtitle">
-        Top 100 Most Sold Video Games Grouped by Platform
+      <h1 id="title">Title</h1>
+      <h2 class="subtitle" id="subtitle">
+        Subtitle
       </h2>
     </div>
 
-    <div class="chart-wrapper">
-    </div>
-    <div class="chart-description" id="description"></div>
-  </div>
-
-  <div class="content flex-grow hide" id="movies-content">
-    <div class="title-wrapper">
-      <h1 id="title">Movies Sales</h1>
-      <h2 class="subtitle">
-        Top 100 Highest Grossing Movies Grouped By Genre
-      </h2>
-    </div>
-
-    <div class="chart-wrapper">
-    </div>
-    <div class="chart-description" id="description"></div>
-  </div>
-
-  <div class="content flex-grow hide" id="kickstarter-content">
-    <div class="title-wrapper">
-      <h1 id="title">Kickstarter Pledges</h1>
-      <h2 class="subtitle">
-        Top 100 Most Pledged Kickstarter Campaigns Grouped By Category
-      </h2>
-    </div>
-
-    <div class="chart-wrapper">
+    <div class="chart-wrapper" id="treemap-wrapper">
     </div>
     <div class="chart-description" id="description"></div>
   </div>
@@ -260,40 +235,39 @@
   <script type="module">
 
     document.addEventListener("DOMContentLoaded", () => {
-      const views = new Map();
-      views.set('videoGames', document.getElementById("videogames-content"));
-      views.set('movies', document.getElementById('movies-content'));
-      views.set('kickstarter', document.getElementById('kickstarter-content'));
-
+      const view = document.getElementById('view-content')
       const navButtons = document.getElementsByClassName('nav-link');
 
       for (let btn of navButtons) {
         btn.addEventListener('click', (event) => {
-          hideAllViews(views);
+          hideView(view);
+          clearTreeMapwHTML();
           resetActiveNavBtn(navButtons);
           btn.classList.add('active-nav-btn')
           switch (event.target.getAttribute('data-href')) {
             case 'videogames':
               fillVideoGamesView();
-              views.get('videoGames').classList.remove('hide');
             break;
             case 'movies':
               fillMoviesView();
-              views.get('movies').classList.remove('hide');
             break;
             case 'kickstarter':
               fillKickstarterView();
-              views.get('kickstarter').classList.remove('hide');
             break;
           }
+          view.classList.remove('hide');
         })
       }
+
+      navButtons[0].click();
     });
 
-    function hideAllViews(viewsMap) {
-      for (let view of viewsMap.keys()) {
-        viewsMap.get(view).classList.add('hide')
-      }
+    function hideView(view) {
+      view.classList.add('hide')
+    }
+
+    function clearTreeMapwHTML() {
+      document.getElementById('treemap-wrapper').innerHTML = ''
     }
 
     function resetActiveNavBtn(navButtons) {
@@ -310,18 +284,27 @@
       const data = await fetch_data(VIDEO_GAMES_SALES_DATA_URL)
       console.log('after fetch_data() for video games')
       console.log(data)
+
+      setTitle('Video Games Sales', 'Top 100 Most Sold Video Games Grouped By Platform')
+      appendSVG(data);
     }
 
     async function fillMoviesView() {
       const data = await fetch_data(MOVIE_SALES_DATA_URL)
       console.log('after fetch_data() for movies')
       console.log(data)
+
+      setTitle('Movies Sales', 'Top 100 Highest Grossing Movies Grouped By Genre')
+      appendSVG(data);
     }
 
     async function fillKickstarterView() {
       const data = await fetch_data(KICKSTARTER_DATA_URL)
       console.log('after fetch_data() for kickstarter')
       console.log(data)
+
+      setTitle('Kickstarter Pledges', 'Top 100 Most Pledged Kickstarter Campaigns Grouped By Category')
+      appendSVG(data);
     }
 
     async function fetch_data(url) {
@@ -337,6 +320,101 @@
       }
     }
 
+    function setTitle(title, subtitle) {
+      document.getElementById('title').textContent = title;
+      document.getElementById('subtitle').textContent = subtitle;
+    }
+
+    function appendSVG(data) {
+      const width = 950
+      const height = 950
+      const padding = 20
+      const legendHeight = 80
+
+      const color = d3.scaleOrdinal(data.children.map(d => d.name), d3.schemeTableau10)
+
+      console.log(d3.schemeSpectral)
+
+      const root = d3.treemap()
+        .tile(d3.treemapSquarify)
+        .size([width, height])
+        .padding(1)
+        .round(true)
+        (d3.hierarchy(data)
+          .sum(d => d.value)
+          .sort((a, b) => b.value - a.value))
+
+      const svg = d3.create('svg')
+        .attr('width', width)
+        .attr('height', height + legendHeight)
+        .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif;");
+
+      console.log(root.leaves())
+
+      const leaf = svg.selectAll('g')
+        .data(root.leaves())
+        .join('g')
+          .attr('transform', d => `translate(${d.x0}, ${d.y0})`);
+
+      const format = d3.format(",d")
+
+      leaf.append('title')
+        .text(d => `${d.name}\n${format(d.value)}`)
+
+      leaf.append('rect')
+        .attr('fill', d => color(d.data.category))
+        .attr('fill-opacity', 0.75)
+        .attr('width', d => d.x1 - d.x0)
+        .attr('height', d => d.y1 - d.y0)
+        .attr('class', 'tile')
+        .attr('data-name', d => d.data.name)
+        .attr('data-category', d => d.data.category)
+        .attr('data-value', d => d.data.value)
+
+
+      leaf.append('text')
+        .selectAll('tspan')
+        .data(d => d.data.name.split(/(?=[A-Z][a-z])|\s+/g).concat(format(d.value)))
+        .join('tspan')
+          .attr('x', 3)
+          .attr('y', (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)
+          .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.7 : null)
+          .text(d => d);
+
+        const legendWidth = 650
+
+        let categories = []
+        data.children.forEach((d) => categories.push(d.name))
+        console.log(categories)
+
+        const legend = svg.append('g')
+          .attr('id', 'legend')
+          .attr('transform', `translate(${width - legendWidth}, ${height + padding})`)
+          // .append(() => Legend(color, {title: data.name, width: legendWidth}))
+          .selectAll('rect')
+          .data(categories)
+          .join('rect')
+            .attr('class', 'legend-item')
+            .attr('x', (d, i) => (legendWidth / categories.length)* i)
+            .attr('y', 2)
+            .attr('width', (d) => (legendWidth / categories.length))
+            .attr('height', 20)
+            .attr('fill', d => color(d))
+
+        svg.append('g')
+          .attr('id', 'legend-text')
+          .attr('transform', `translate(${width - legendWidth + 5}, ${height + padding + 25})`)
+          .selectAll('text')
+          .data(categories)
+          .join('text')
+            .attr('y', d => 10)
+            .attr('x', (d, i) => (legendWidth / categories.length) * i)
+            .text(d => d)
+
+        document.getElementById('treemap-wrapper').appendChild(svg.node())
+
+        setupTooltip()
+    }
     
 
     // async function main() {
@@ -406,7 +484,7 @@
 
     function setupTooltip() {
       const tooltip = document.getElementById("tooltip");
-      const elems = document.getElementsByClassName("county");
+      const elems = document.getElementsByClassName("tile");
 
       for (let element of elems) {
         element.addEventListener("mouseover", function (event) {
@@ -423,20 +501,21 @@
     function updateTooltip(tooltip, event) {
       const mouseX = event.clientX;
       const mouseY = event.clientY;
+  
       const paddingX = 20;
 
       tooltip.style.top = mouseY + "px";
       tooltip.style.left = mouseX + paddingX + "px";
 
-      const county = event.target.getAttribute('data-county')
-      const degree = event.target.getAttribute('data-education')
-      const state = event.target.getAttribute('data-state')
+      const name = event.target.getAttribute('data-name')
+      const category = event.target.getAttribute('data-category')
+      const value = event.target.getAttribute('data-value')
 
-      tooltip.setAttribute('data-education', degree);
+      tooltip.setAttribute('data-value', value)
 
       let html = "";
 
-      html += `${county}, ${state}: <b>${degree}%</b>`
+      html += `${name}, ${category}: <b>${value}%</b>`
 
       tooltip.innerHTML = html;
     }
