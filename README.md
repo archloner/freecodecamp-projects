@@ -6,17 +6,23 @@ Repository containing my projects required for various freecodecamp certificates
 
 Projects created for Data Visualization certificate. [D3.js](https://d3js.org/) was main library used to constuct those SVG graphs, plots and maps. 
 
-### Bar Chart
+### Treemap 
 
-![Bar chart graph](./data-visualization-d3/assets/01-bar-graph.png)
+Treemap for data showing 100 top sales of videogames by gaming platform. Additional tabs show treemaps for two other datasets (Top movie sales and top kickstarter pledges)
 
-Live example on [CodePen](https://codepen.io/philip-bjern/pen/YzBjxpo)
+![Treemap](./data-visualization-d3/assets/05-treemap-graph.png)
 
-### Scatterplot Graph
+Live example on [CodePen](https://codepen.io/philip-bjern/pen/WNPLzxX)
 
-![Scatterplot Graph](./data-visualization-d3/assets/02-scatterplot.png)
 
-Live example on [CodePen](https://codepen.io/philip-bjern/pen/KKJBZpa)
+### Choropleth Map
+
+A map showing percentage of adults age 25 and older with bachelor's degree or higher (2010 - 2014) for each county of each state of United States of America
+
+![Choropleth Map](./data-visualization-d3/assets/04-choropleth-map.png)
+
+Live example on [CodePen](https://codepen.io/philip-bjern/pen/WNPaOvg)
+
 
 ### Heatmap
 
@@ -26,10 +32,27 @@ Heat map showing historical data (from 1753 up to 2015) of monthy global land-su
 
 Live example on [CodePen](https://codepen.io/philip-bjern/pen/rNPZadv)
 
-### Choropleth Map
 
-A map showing percentage of adults age 25 and older with bachelor's degree or higher (2010 - 2014) for each county of each state of United States of America
+### Scatterplot Graph
 
-![Choropleth Map](./data-visualization-d3/assets/04-choropleth-map.png)
+Plot displaing history of doping allegations among tour de france winners and lap times
 
-Live example on [CodePen](https://codepen.io/philip-bjern/pen/WNPaOvg)
+![Scatterplot Graph](./data-visualization-d3/assets/02-scatterplot.png)
+
+Live example on [CodePen](https://codepen.io/philip-bjern/pen/KKJBZpa)
+
+
+### Bar Chart
+
+Chart showing GDP of United States of America over the years.
+
+![Bar chart graph](./data-visualization-d3/assets/01-bar-graph.png)
+
+Live example on [CodePen](https://codepen.io/philip-bjern/pen/YzBjxpo)
+
+
+
+
+
+
+
